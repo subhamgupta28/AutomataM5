@@ -14,8 +14,8 @@
 #define pinA 7 // A pin of the rotary encoder
 #define pinB 9 // B pin of the rotary encoder
 
-// const char *HOST = "192.168.29.67";
-// int PORT = 8080;
+// const char *HOST = "192.168.137.1";
+// int PORT = 8010;
 
 const char *HOST = "raspberry.local";
 int PORT = 8010;
@@ -149,9 +149,9 @@ void setup()
   automata.addAttribute("x", "Pos Z", "deg", "DATA|MAIN");
   automata.addAttribute("encoderPos", "Encoder", "deg", "DATA|MAIN");
 
-  automata.addAttribute("ax", "Accel X", "g's");
-  automata.addAttribute("ay", "Accel Y", "g's");
-  automata.addAttribute("az", "Accel Z", "g's");
+  automata.addAttribute("ax", "Accel X", "g's","DATA|MAIN");
+  automata.addAttribute("ay", "Accel Y", "g's","DATA|MAIN");
+  automata.addAttribute("az", "Accel Z", "g's","DATA|MAIN");
 
   automata.addAttribute("button", "Button", "On/Off", "ACTION|MENU|BTN");
   automata.addAttribute("buzzer", "Buzzer", "tone", "ACTION|IN");
