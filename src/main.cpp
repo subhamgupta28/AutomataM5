@@ -14,7 +14,7 @@
 #define pinA 7 // A pin of the rotary encoder
 #define pinB 9 // B pin of the rotary encoder
 
-// const char *HOST = "192.168.137.1";
+// const char *HOST = "192.168.1.50";
 // int PORT = 8010;
 
 const char *HOST = "raspberry.local";
@@ -126,9 +126,9 @@ void setup()
   pixel.setBrightness(100);
   pixel.setPixelColor(0, 255, 0, 0);
   pixel.show();
-  tone(BUZZER, 4000, 500);
-  delay(100);
-  analogWrite(BUZZER, LOW);
+  // tone(BUZZER, 4000, 500);
+  // delay(100);
+  // analogWrite(BUZZER, LOW);
 
   Wire.begin(BM8563_I2C_SDA, BM8563_I2C_SCL);
 
@@ -265,7 +265,7 @@ void loop()
 
   readRTC();
   readIMU();
-  encoderData();
+  // encoderData();
   float batteryVoltage = ((analogRead(BAT) * 2 * 3.3 * 1000) / 4096) / 1000;
 
   automata.loop();
