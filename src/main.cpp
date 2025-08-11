@@ -1,8 +1,8 @@
-#include "SparkFun_BMI270_Arduino_Library.h" // imu
+// #include "SparkFun_BMI270_Arduino_Library.h" // imu
 #include "Arduino.h"
 #include <Wire.h>
 #include <Adafruit_NeoPixel.h>
-#include "I2C_BM8563.h"
+// #include "I2C_BM8563.h"
 #include "config.h"
 #include <SD.h>
 #include <SPI.h>
@@ -57,8 +57,8 @@ int lastEncoded = 0;
 
 
 Adafruit_NeoPixel pixel(1, PIN_LED, NEO_GRB + NEO_KHZ800);
-I2C_BM8563 rtc(I2C_BM8563_DEFAULT_ADDRESS);
-BMI270 imu;
+// I2C_BM8563 rtc(I2C_BM8563_DEFAULT_ADDRESS);
+// BMI270 imu;
 JsonDocument doc;
 
 void action(const Action action)
@@ -126,32 +126,32 @@ void setup()
   pixel.setBrightness(100);
   pixel.setPixelColor(0, 255, 0, 0);
   pixel.show();
-  // tone(BUZZER, 4000, 500);
-  // delay(100);
-  // analogWrite(BUZZER, LOW);
+  tone(BUZZER, 4000, 500);
+  delay(100);
+  analogWrite(BUZZER, LOW);
 
-  Wire.begin(BM8563_I2C_SDA, BM8563_I2C_SCL);
+  // Wire.begin(BM8563_I2C_SDA, BM8563_I2C_SCL);
 
-  while (imu.beginI2C(i2cAddress))
-  {
-    Serial.println("Error: BMI270 not connected, check wiring and I2C address!");
-    delay(1000);
-  }
+  // while (imu.beginI2C(i2cAddress))
+  // {
+  //   Serial.println("Error: BMI270 not connected, check wiring and I2C address!");
+  //   delay(1000);
+  // }
 
-  rtc.begin();
-  rtc.clearIRQ();
+  // rtc.begin();
+  // rtc.clearIRQ();
 
   delay(200);
 
   automata.begin();
-  automata.addAttribute("x", "Pos X", "deg", "DATA|MAIN");
-  automata.addAttribute("y", "Pos Y", "deg", "DATA|MAIN");
-  automata.addAttribute("x", "Pos Z", "deg", "DATA|MAIN");
-  automata.addAttribute("encoderPos", "Encoder", "deg", "DATA|MAIN");
+  // automata.addAttribute("x", "Pos X", "deg", "DATA|MAIN");
+  // automata.addAttribute("y", "Pos Y", "deg", "DATA|MAIN");
+  // automata.addAttribute("x", "Pos Z", "deg", "DATA|MAIN");
+  // automata.addAttribute("encoderPos", "Encoder", "deg", "DATA|MAIN");
 
-  automata.addAttribute("ax", "Accel X", "g's","DATA|MAIN");
-  automata.addAttribute("ay", "Accel Y", "g's","DATA|MAIN");
-  automata.addAttribute("az", "Accel Z", "g's","DATA|MAIN");
+  // automata.addAttribute("ax", "Accel X", "g's","DATA|MAIN");
+  // automata.addAttribute("ay", "Accel Y", "g's","DATA|MAIN");
+  // automata.addAttribute("az", "Accel Z", "g's","DATA|MAIN");
 
   automata.addAttribute("button", "Button", "On/Off", "ACTION|MENU|BTN");
   automata.addAttribute("buzzer", "Buzzer", "tone", "ACTION|IN");
@@ -163,99 +163,99 @@ void setup()
   automata.onActionReceived(action);
   automata.delayedUpdate(sendData);
 }
-void updateTime()
-{
-  struct tm timeInfo;
-  if (getLocalTime(&timeInfo))
-  {
-    // Set RTC time
-    I2C_BM8563_TimeTypeDef timeStruct;
-    timeStruct.hours = timeInfo.tm_hour;
-    timeStruct.minutes = timeInfo.tm_min;
-    timeStruct.seconds = timeInfo.tm_sec;
-    rtc.setTime(&timeStruct);
+// void updateTime()
+// {
+//   struct tm timeInfo;
+//   if (getLocalTime(&timeInfo))
+//   {
+//     // Set RTC time
+//     I2C_BM8563_TimeTypeDef timeStruct;
+//     timeStruct.hours = timeInfo.tm_hour;
+//     timeStruct.minutes = timeInfo.tm_min;
+//     timeStruct.seconds = timeInfo.tm_sec;
+//     rtc.setTime(&timeStruct);
 
-    // Set RTC Date
-    I2C_BM8563_DateTypeDef dateStruct;
-    dateStruct.weekDay = timeInfo.tm_wday;
-    dateStruct.month = timeInfo.tm_mon + 1;
-    dateStruct.date = timeInfo.tm_mday;
-    dateStruct.year = timeInfo.tm_year + 1900;
-    rtc.setDate(&dateStruct);
-  }
-}
+//     // Set RTC Date
+//     I2C_BM8563_DateTypeDef dateStruct;
+//     dateStruct.weekDay = timeInfo.tm_wday;
+//     dateStruct.month = timeInfo.tm_mon + 1;
+//     dateStruct.date = timeInfo.tm_mday;
+//     dateStruct.year = timeInfo.tm_year + 1900;
+//     rtc.setDate(&dateStruct);
+//   }
+// }
 float toDegrees(float radians)
 {
   return radians * 180.0 / PI;
 }
-void readIMU()
-{
-  imu.getSensorData();
+// void readIMU()
+// {
+//   imu.getSensorData();
 
-  // Print acceleration data
-  for (int i = 0; i < 8; i++)
-  {
-    Serial.print(imu.data.auxData[i]);
-    Serial.print(" ");
-  }
+//   // Print acceleration data
+//   for (int i = 0; i < 8; i++)
+//   {
+//     Serial.print(imu.data.auxData[i]);
+//     Serial.print(" ");
+//   }
 
-  ax = imu.data.accelX;
-  ay = imu.data.accelY;
-  az = imu.data.accelZ;
-  gx = imu.data.gyroX * 0.001;
-  gy = imu.data.gyroY * 0.001;
-  gz = imu.data.gyroZ * 0.001;
+//   ax = imu.data.accelX;
+//   ay = imu.data.accelY;
+//   az = imu.data.accelZ;
+//   gx = imu.data.gyroX * 0.001;
+//   gy = imu.data.gyroY * 0.001;
+//   gz = imu.data.gyroZ * 0.001;
 
-  float roll = atan2(ay, az);
-  float pitch = atan2(-ax, sqrt(ay * ay + az * az));
-  float yaw = atan2(gy, gx); // Yaw can be more complex; this is a basic calculation
+//   float roll = atan2(ay, az);
+//   float pitch = atan2(-ax, sqrt(ay * ay + az * az));
+//   float yaw = atan2(gy, gx); // Yaw can be more complex; this is a basic calculation
 
-  // Convert radians to degrees
-  x = toDegrees(roll);
-  y = toDegrees(pitch);
-  z = toDegrees(yaw);
+//   // Convert radians to degrees
+//   x = toDegrees(roll);
+//   y = toDegrees(pitch);
+//   z = toDegrees(yaw);
 
-  Serial.print("Acceleration in g's");
-  Serial.print("\t");
-  Serial.print("X: ");
-  Serial.print(ax, 3);
-  Serial.print("\t");
-  Serial.print("Y: ");
-  Serial.print(ay, 3);
-  Serial.print("\t");
-  Serial.print("Z: ");
-  Serial.print(az, 3);
-  Serial.print("\t");
-  Serial.print("Rotation in deg/sec");
-  Serial.print("\t");
-  Serial.print("X: ");
-  Serial.print(gx, 3);
-  Serial.print("\t");
-  Serial.print("Y: ");
-  Serial.print(gy, 3);
-  Serial.print("\t");
-  Serial.print("Z: ");
-  Serial.println(gz, 3);
-}
+//   Serial.print("Acceleration in g's");
+//   Serial.print("\t");
+//   Serial.print("X: ");
+//   Serial.print(ax, 3);
+//   Serial.print("\t");
+//   Serial.print("Y: ");
+//   Serial.print(ay, 3);
+//   Serial.print("\t");
+//   Serial.print("Z: ");
+//   Serial.print(az, 3);
+//   Serial.print("\t");
+//   Serial.print("Rotation in deg/sec");
+//   Serial.print("\t");
+//   Serial.print("X: ");
+//   Serial.print(gx, 3);
+//   Serial.print("\t");
+//   Serial.print("Y: ");
+//   Serial.print(gy, 3);
+//   Serial.print("\t");
+//   Serial.print("Z: ");
+//   Serial.println(gz, 3);
+// }
 void powerOff(int tim)
 {
 
-  rtc.SetAlarmIRQ(tim);
+  // rtc.SetAlarmIRQ(tim);
   delay(200);
   pixel.setPixelColor(0, 0, 0, 0);
   pixel.show();
   // esp_deep_sleep_enable_timer_wakeup(1000000*tim);
   esp_deep_sleep_start();
 }
-void readRTC()
-{
-  I2C_BM8563_DateTypeDef dateStruct;
-  I2C_BM8563_TimeTypeDef timeStruct;
-  rtc.getDate(&dateStruct);
-  rtc.getTime(&timeStruct);
+// void readRTC()
+// {
+//   I2C_BM8563_DateTypeDef dateStruct;
+//   I2C_BM8563_TimeTypeDef timeStruct;
+//   rtc.getDate(&dateStruct);
+//   rtc.getTime(&timeStruct);
 
-  dateTime = String(dateStruct.year) + "/" + String(dateStruct.month) + "/" + String(dateStruct.date) + " " + String(timeStruct.hours) + ":" + String(timeStruct.minutes) + ":" + String(timeStruct.seconds);
-}
+//   dateTime = String(dateStruct.year) + "/" + String(dateStruct.month) + "/" + String(dateStruct.date) + " " + String(timeStruct.hours) + ":" + String(timeStruct.minutes) + ":" + String(timeStruct.seconds);
+// }
 
 
 
@@ -263,21 +263,21 @@ void readRTC()
 void loop()
 {
 
-  readRTC();
-  readIMU();
+  // readRTC();
+  // readIMU();
   // encoderData();
   float batteryVoltage = ((analogRead(BAT) * 2 * 3.3 * 1000) / 4096) / 1000;
 
   automata.loop();
 
   float bt = ((analogRead(4) * 2 * 3.3 * 1000) / 4096) / 1000;
-  doc["x"] = String(x, 2);
-  doc["y"] = String(y, 2);
-  doc["z"] = String(z, 2);
-  doc["ax"] = String(ax, 2);
-  doc["ay"] = String(ay, 2);
-  doc["az"] = String(az, 2);
-  doc["encoderPos"] = encoderPos;
+  // doc["x"] = String(x, 2);
+  // doc["y"] = String(y, 2);
+  // doc["z"] = String(z, 2);
+  // doc["ax"] = String(ax, 2);
+  // doc["ay"] = String(ay, 2);
+  // doc["az"] = String(az, 2);
+  // doc["encoderPos"] = encoderPos;
   // doc["rtcTime"] = dateTime;
   doc["button"] = digitalRead(BUTTON_PIN);
 
@@ -315,5 +315,5 @@ void loop()
   pixel.setPixelColor(0, 0, 0, 0);
   pixel.show();
   // put your main code here, to run repeatedly:
-  delay(1);
+  delay(100);
 }
