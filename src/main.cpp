@@ -1,18 +1,34 @@
-// #include "SparkFun_BMI270_Arduino_Library.h" // imu
 #include "Arduino.h"
 #include <Wire.h>
 #include <Adafruit_NeoPixel.h>
-// #include "I2C_BM8563.h"
 #include "config.h"
-#include <SD.h>
-#include <SPI.h>
 #include "Automata.h"
 #include "ArduinoJson.h"
-#include <SoftwareSerial.h>
+#include "MAX30105.h"
 
+#include "heartRate.h"
+#include "spo2_algorithm.h"
 
-#define pinA 7 // A pin of the rotary encoder
-#define pinB 9 // B pin of the rotary encoder
+MAX30105 particleSensor;
+const byte RATE_SIZE = 4; // Increase this for more averaging. 4 is good.
+byte rates[RATE_SIZE];    // Array of heart rates
+byte rateSpot = 0;
+long lastBeat = 0; // Time at which the last beat occurred
+
+float beatsPerMinute;
+int beatAvg;
+
+uint32_t irBuffer[100];  // infrared LED sensor data
+uint32_t redBuffer[100]; // red LED sensor data
+
+int32_t bufferLength;  // data length
+int32_t spo2;          // SPO2 value
+int8_t validSPO2;      // indicator to show if the SPO2 calculation is valid
+int32_t heartRate;     // heart rate value
+int8_t validHeartRate; // indicator to show if the heart rate calculation is valid
+
+#define I2C_SDA_PIN 7 // A pin of the rotary encoder
+#define I2C_SCL_PIN 9 // B pin of the rotary encoder
 
 // const char *HOST = "192.168.1.50";
 // int PORT = 8010;
@@ -38,27 +54,8 @@ bool isRecord = false;
 String downUrl = "";
 int ld = 0;
 
-int minVal = 265;
-int maxVal = 402;
-float ax;
-float ay;
-float az;
-
-float gx;
-float gy;
-float gz;
-
-float x;
-float y;
-float z;
-
-volatile int encoderPos = 0; // Store encoder position
-int lastEncoded = 0;
-
-
 Adafruit_NeoPixel pixel(1, PIN_LED, NEO_GRB + NEO_KHZ800);
-// I2C_BM8563 rtc(I2C_BM8563_DEFAULT_ADDRESS);
-// BMI270 imu;
+
 JsonDocument doc;
 
 void action(const Action action)
@@ -79,83 +76,41 @@ void sendData()
   automata.sendData(doc);
 }
 
-void encoderData(){
-  int	currentStateCLK = digitalRead(pinA);
+void initMAX30105()
+{
+  if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) // Use default I2C port, 400kHz speed
+  {
+    Serial.println("MAX30105 was not found. Please check wiring/power. ");
+    while (1)
+      ;
+  }
+  Serial.println("Place your index finger on the sensor with steady pressure.");
 
-	// If last and current state of CLK are different, then pulse occurred
-	// React to only 1 state change to avoid double count
-	if (currentStateCLK != lastEncoded  && currentStateCLK == 1){
+  byte ledBrightness = 60; // Options: 0=Off to 255=50mA
+  byte sampleAverage = 4;  // Options: 1, 2, 4, 8, 16, 32
+  byte ledMode = 2;        // Options: 1 = Red only, 2 = Red + IR, 3 = Red + IR + Green
+  byte sampleRate = 100;   // Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
+  int pulseWidth = 411;    // Options: 69, 118, 215, 411
+  int adcRange = 4096;     // Options: 2048, 4096, 8192, 16384
 
-		// If the DT state is different than the CLK state then
-		// the encoder is rotating CCW so decrement
-		if (digitalRead(pinB) != currentStateCLK) {
-			encoderPos --;
-      pixel.setPixelColor(0, 0, 250, 0);
-      pixel.show();
-		} else {
-			// Encoder is rotating CW so increment
-			encoderPos ++;
-      pixel.setPixelColor(0, 0, 0, 250);
-      pixel.show();
-		}
-    delay(100);
-    JsonDocument doc;
-    doc["encoderPos"] = encoderPos;
-    doc["key"] = "encoderPos";
-	}
-
-	// Remember last CLK state
-	lastEncoded = currentStateCLK;
+  particleSensor.setup(ledBrightness, sampleAverage, ledMode, sampleRate, pulseWidth, adcRange);
 }
 
 void setup()
 {
-  // put your setup code here, to run once:
-  pinMode(POWER_HOLD_PIN, OUTPUT);
-  digitalWrite(POWER_HOLD_PIN, HIGH);
+  delay(3000);
   Serial.begin(115200);
-
-  pinMode(BUZZER, OUTPUT);
   pinMode(BUTTON_PIN, INPUT);
-  pinMode(E_LED, OUTPUT);
-  pinMode(BAT, INPUT);
-  pinMode(pinA, INPUT_PULLUP);
-  pinMode(pinB, INPUT_PULLUP);
-  // attachInterrupt(digitalPinToInterrupt(pinA), encoder, RISING);
   pixel.begin();
   pixel.setBrightness(100);
   pixel.setPixelColor(0, 255, 0, 0);
   pixel.show();
-  tone(BUZZER, 4000, 500);
-  delay(100);
-  analogWrite(BUZZER, LOW);
+  Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
 
-  // Wire.begin(BM8563_I2C_SDA, BM8563_I2C_SCL);
-
-  // while (imu.beginI2C(i2cAddress))
-  // {
-  //   Serial.println("Error: BMI270 not connected, check wiring and I2C address!");
-  //   delay(1000);
-  // }
-
-  // rtc.begin();
-  // rtc.clearIRQ();
-
-  delay(200);
-
+  initMAX30105();
   automata.begin();
-  // automata.addAttribute("x", "Pos X", "deg", "DATA|MAIN");
-  // automata.addAttribute("y", "Pos Y", "deg", "DATA|MAIN");
-  // automata.addAttribute("x", "Pos Z", "deg", "DATA|MAIN");
-  // automata.addAttribute("encoderPos", "Encoder", "deg", "DATA|MAIN");
-
-  // automata.addAttribute("ax", "Accel X", "g's","DATA|MAIN");
-  // automata.addAttribute("ay", "Accel Y", "g's","DATA|MAIN");
-  // automata.addAttribute("az", "Accel Z", "g's","DATA|MAIN");
-
-  automata.addAttribute("button", "Button", "On/Off", "ACTION|MENU|BTN");
-  automata.addAttribute("buzzer", "Buzzer", "tone", "ACTION|IN");
-  // automata.addAttribute("rtcTime", "RTC Time", "");
+  automata.addAttribute("heartRate", "Heart Rate", "deg", "DATA|MAIN");
+  automata.addAttribute("spo2", "SPO2", "deg", "DATA|MAIN");
 
   automata.registerDevice();
   pixel.setPixelColor(0, 0, 0, 0);
@@ -163,157 +118,100 @@ void setup()
   automata.onActionReceived(action);
   automata.delayedUpdate(sendData);
 }
-// void updateTime()
-// {
-//   struct tm timeInfo;
-//   if (getLocalTime(&timeInfo))
-//   {
-//     // Set RTC time
-//     I2C_BM8563_TimeTypeDef timeStruct;
-//     timeStruct.hours = timeInfo.tm_hour;
-//     timeStruct.minutes = timeInfo.tm_min;
-//     timeStruct.seconds = timeInfo.tm_sec;
-//     rtc.setTime(&timeStruct);
 
-//     // Set RTC Date
-//     I2C_BM8563_DateTypeDef dateStruct;
-//     dateStruct.weekDay = timeInfo.tm_wday;
-//     dateStruct.month = timeInfo.tm_mon + 1;
-//     dateStruct.date = timeInfo.tm_mday;
-//     dateStruct.year = timeInfo.tm_year + 1900;
-//     rtc.setDate(&dateStruct);
-//   }
-// }
-float toDegrees(float radians)
+void readMAX30105()
 {
-  return radians * 180.0 / PI;
+  bufferLength = 100; // buffer length of 100 stores 4 seconds of samples running at 25sps
+
+  // read the first 100 samples, and determine the signal range
+  for (byte i = 0; i < bufferLength; i++)
+  {
+    while (particleSensor.available() == false) // do we have new data?
+      particleSensor.check();                   // Check the sensor for new data
+
+    redBuffer[i] = particleSensor.getRed();
+    irBuffer[i] = particleSensor.getIR();
+    particleSensor.nextSample(); // We're finished with this sample so move to next sample
+
+    Serial.print(F("red="));
+    Serial.print(redBuffer[i], DEC);
+    Serial.print(F(", ir="));
+    Serial.println(irBuffer[i], DEC);
+  }
+
+  // calculate heart rate and SpO2 after first 100 samples (first 4 seconds of samples)
+  maxim_heart_rate_and_oxygen_saturation(irBuffer, bufferLength, redBuffer, &spo2, &validSPO2, &heartRate, &validHeartRate);
+
+  // Continuously taking samples from MAX30102.  Heart rate and SpO2 are calculated every 1 second
+  while (1)
+  {
+    // dumping the first 25 sets of samples in the memory and shift the last 75 sets of samples to the top
+    for (byte i = 25; i < 100; i++)
+    {
+      redBuffer[i - 25] = redBuffer[i];
+      irBuffer[i - 25] = irBuffer[i];
+    }
+
+    // take 25 sets of samples before calculating the heart rate.
+    for (byte i = 75; i < 100; i++)
+    {
+      while (particleSensor.available() == false) // do we have new data?
+        particleSensor.check();                   // Check the sensor for new data
+
+      redBuffer[i] = particleSensor.getRed();
+      irBuffer[i] = particleSensor.getIR();
+      particleSensor.nextSample(); // We're finished with this sample so move to next sample
+
+      // send samples and calculation result to terminal program through UART
+      if (validSPO2 && validHeartRate)
+      {
+        Serial.print(F("red="));
+        Serial.print(redBuffer[i], DEC);
+        Serial.print(F(", ir="));
+        Serial.print(irBuffer[i], DEC);
+
+        Serial.print(F(", HR="));
+        Serial.print(heartRate, DEC);
+
+        Serial.print(F(", HRvalid="));
+        Serial.print(validHeartRate, DEC);
+
+        Serial.print(F(", SPO2="));
+        Serial.print(spo2, DEC);
+
+        Serial.print(F(", SPO2Valid="));
+        Serial.println(validSPO2, DEC);
+        pixel.setPixelColor(0, 200, 200, 0);
+        pixel.show();
+      }
+      else
+      {
+        pixel.setPixelColor(0, 255, 0, 0);
+        pixel.show();
+      }
+    }
+
+    // After gathering 25 new samples recalculate HR and SP02
+    maxim_heart_rate_and_oxygen_saturation(irBuffer, bufferLength, redBuffer, &spo2, &validSPO2, &heartRate, &validHeartRate);
+  }
 }
-// void readIMU()
-// {
-//   imu.getSensorData();
-
-//   // Print acceleration data
-//   for (int i = 0; i < 8; i++)
-//   {
-//     Serial.print(imu.data.auxData[i]);
-//     Serial.print(" ");
-//   }
-
-//   ax = imu.data.accelX;
-//   ay = imu.data.accelY;
-//   az = imu.data.accelZ;
-//   gx = imu.data.gyroX * 0.001;
-//   gy = imu.data.gyroY * 0.001;
-//   gz = imu.data.gyroZ * 0.001;
-
-//   float roll = atan2(ay, az);
-//   float pitch = atan2(-ax, sqrt(ay * ay + az * az));
-//   float yaw = atan2(gy, gx); // Yaw can be more complex; this is a basic calculation
-
-//   // Convert radians to degrees
-//   x = toDegrees(roll);
-//   y = toDegrees(pitch);
-//   z = toDegrees(yaw);
-
-//   Serial.print("Acceleration in g's");
-//   Serial.print("\t");
-//   Serial.print("X: ");
-//   Serial.print(ax, 3);
-//   Serial.print("\t");
-//   Serial.print("Y: ");
-//   Serial.print(ay, 3);
-//   Serial.print("\t");
-//   Serial.print("Z: ");
-//   Serial.print(az, 3);
-//   Serial.print("\t");
-//   Serial.print("Rotation in deg/sec");
-//   Serial.print("\t");
-//   Serial.print("X: ");
-//   Serial.print(gx, 3);
-//   Serial.print("\t");
-//   Serial.print("Y: ");
-//   Serial.print(gy, 3);
-//   Serial.print("\t");
-//   Serial.print("Z: ");
-//   Serial.println(gz, 3);
-// }
-void powerOff(int tim)
-{
-
-  // rtc.SetAlarmIRQ(tim);
-  delay(200);
-  pixel.setPixelColor(0, 0, 0, 0);
-  pixel.show();
-  // esp_deep_sleep_enable_timer_wakeup(1000000*tim);
-  esp_deep_sleep_start();
-}
-// void readRTC()
-// {
-//   I2C_BM8563_DateTypeDef dateStruct;
-//   I2C_BM8563_TimeTypeDef timeStruct;
-//   rtc.getDate(&dateStruct);
-//   rtc.getTime(&timeStruct);
-
-//   dateTime = String(dateStruct.year) + "/" + String(dateStruct.month) + "/" + String(dateStruct.date) + " " + String(timeStruct.hours) + ":" + String(timeStruct.minutes) + ":" + String(timeStruct.seconds);
-// }
-
-
-
 
 void loop()
 {
-
-  // readRTC();
-  // readIMU();
-  // encoderData();
-  float batteryVoltage = ((analogRead(BAT) * 2 * 3.3 * 1000) / 4096) / 1000;
-
+  readMAX30105();
   automata.loop();
-
-  float bt = ((analogRead(4) * 2 * 3.3 * 1000) / 4096) / 1000;
-  // doc["x"] = String(x, 2);
-  // doc["y"] = String(y, 2);
-  // doc["z"] = String(z, 2);
-  // doc["ax"] = String(ax, 2);
-  // doc["ay"] = String(ay, 2);
-  // doc["az"] = String(az, 2);
-  // doc["encoderPos"] = encoderPos;
-  // doc["rtcTime"] = dateTime;
-  doc["button"] = digitalRead(BUTTON_PIN);
-
+  doc["heartRate"] = heartRate;
+  doc["spo2"] = spo2;
   if ((millis() - start) > 1000)
   {
+    pixel.setPixelColor(0, 200, 200, 0);
+    pixel.show();
     automata.sendLive(doc);
     start = millis();
-  }
-
-  if (buz && (millis() - buzt) > buzTime)
-  {
-    tone(BUZZER, buzTone, 50);
-    delay(100);
-    // analogWrite(BUZZER, LOW);
-    buzt = millis();
-  }
-
-  if (digitalRead(BUTTON_PIN) == LOW)
-  {
-    tone(BUZZER, 4000, 50);
-    JsonDocument doc;
-    doc["button"] = digitalRead(BUTTON_PIN);
-    doc["key"] = "button";
-    automata.sendAction(doc);
-    pixel.setPixelColor(0, 250, 250, 255);
-    pixel.show();
-    delay(300);
-  }
-  else
-  {
-    pixel.setPixelColor(0, 20, 20, 0);
-    pixel.show();
   }
 
   pixel.setPixelColor(0, 0, 0, 0);
   pixel.show();
   // put your main code here, to run repeatedly:
-  delay(100);
+  // delay(100);
 }
