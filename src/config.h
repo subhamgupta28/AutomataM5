@@ -8,10 +8,6 @@
 #define DEVICE_NAME "Capsule"
 
 
-#define MOSI 12
-#define MISO 39
-#define SCK 14
-#define CS 11
 #define WIFI_TIMEOUT_MS 20000
 #define E_LED 9
 #define IR_PIN 4
