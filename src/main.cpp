@@ -6,14 +6,18 @@
 #include <WiFiUdp.h>
 #define I2C_SDA_PIN 7
 #define I2C_SCL_PIN 9
-// const char* HOST = "192.168.29.67";
-// int PORT = 8080;
+
+
+// const char *HOST = "automata.realsubhamgupta.in";
+// int PORT = 443;
 
 const char *HOST = "raspberry.local";
 int PORT = 8010;
 
+
 Preferences preferences;
-Automata automata("Battery 178WH", HOST, PORT);
+// Automata automata("Battery 178WH", HOST, PORT, "0.tcp.in.ngrok.io", 13928);
+Automata automata("Battery 270WH", HOST, PORT);
 JsonDocument doc;
 Adafruit_INA219 ina219_a(0x40);
 Adafruit_NeoPixel led(1, 21, NEO_RGB + NEO_KHZ800);
@@ -123,7 +127,7 @@ void setup()
   automata.addAttribute("percent", "Percent", "%", "DATA|MAIN");
   automata.addAttribute("capacity", "Capacity", "Ah", "DATA|MAIN");
   automata.addAttribute("reset", "Reset", "", "ACTION|MENU|BTN");
-  automata.addAttribute("dischargingTime", "Time Left", "Hr", "DATA|MAIN");
+  automata.addAttribute("dischargingTime", "Runtime", "Hr", "DATA|MAIN");
     automata.addAttribute("status", "Status", "", "DATA|MAIN");
   // automata.addAttribute("onOff", "OnOff", "", "ACTION|SWITCH");
 
@@ -165,10 +169,10 @@ void readPow()
 
   totalEnergy += power_mW * (timeInterval / (60 * 60));
   capacity_mAh += current_mA * (timeInterval / (60 * 60));
-  isDischarge = current_mA < 0 ? "DISCHARGING" : "CHARGING";
-  percent = mapf(busvoltage, 12.8, 16.8, 0.0, 100.0);
+  isDischarge = current_mA < 0 ? "DISCHARGE" : "CHARGING";
+  percent = mapf(busvoltage, 18, 25.2, 0.0, 100.0);
 
-  if (isDischarge == "DISCHARGING")
+  if (isDischarge == "DISCHARGE")
   {
     dischargingTimeHours = (targetCapacity - abs(capacity_mAh)) / abs(current_mA);
   }
