@@ -8,16 +8,16 @@
 #define I2C_SCL_PIN 9
 
 
-// const char *HOST = "automata.realsubhamgupta.in";
-// int PORT = 443;
+const char *HOST = "automata.realsubhamgupta.in";
+int PORT = 443;
 
-const char *HOST = "raspberry.local";
-int PORT = 8010;
+// const char *HOST = "raspberry.local";
+// int PORT = 8010;
 
+Automata automata("Battery 270WH", HOST, PORT, "0.tcp.in.ngrok.io", 14730);
 
 Preferences preferences;
 // Automata automata("Battery 178WH", HOST, PORT, "0.tcp.in.ngrok.io", 13928);
-Automata automata("Battery 270WH", HOST, PORT);
 JsonDocument doc;
 Adafruit_INA219 ina219_a(0x40);
 Adafruit_NeoPixel led(1, 21, NEO_RGB + NEO_KHZ800);
