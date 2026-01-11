@@ -7,14 +7,13 @@
 #define I2C_SDA_PIN 7
 #define I2C_SCL_PIN 9
 
-
 const char *HOST = "automata.realsubhamgupta.in";
 int PORT = 443;
 
 // const char *HOST = "raspberry.local";
 // int PORT = 8010;
 
-Automata automata("Battery 270WH", HOST, PORT, "0.tcp.in.ngrok.io", 14730);
+Automata automata("Battery 270WH","SENSOR|BATTERY", HOST, PORT, "0.tcp.in.ngrok.io", 16035);
 
 Preferences preferences;
 // Automata automata("Battery 178WH", HOST, PORT, "0.tcp.in.ngrok.io", 13928);
@@ -128,7 +127,7 @@ void setup()
   automata.addAttribute("capacity", "Capacity", "Ah", "DATA|MAIN");
   automata.addAttribute("reset", "Reset", "", "ACTION|MENU|BTN");
   automata.addAttribute("dischargingTime", "Runtime", "Hr", "DATA|MAIN");
-    automata.addAttribute("status", "Status", "", "DATA|MAIN");
+  automata.addAttribute("status", "Status", "", "DATA|MAIN");
   // automata.addAttribute("onOff", "OnOff", "", "ACTION|SWITCH");
 
   automata.registerDevice();
@@ -151,7 +150,7 @@ void readPow()
   // Read INA219 data
   c1_shunt = ina219_a.getShuntVoltage_mV();
   c1_volt = ina219_a.getBusVoltage_V();
-  c1_curr = ina219_a.getCurrent_mA() * 10.0*-1;
+  c1_curr = ina219_a.getCurrent_mA() * 10.0 * -1;
   c1_curr = c1_curr / 1000; // Scaled and converted to A
   c1_pow = c1_volt * c1_curr;
 
@@ -210,7 +209,7 @@ void loop()
   doc["dischargingTime"] = String(dischargingTimeHours, 2);
   doc["status"] = isDischarge;
 
-  if ((millis() - start) > 800)
+  if ((millis() - start) > 2000)
   {
 
     // digitalWrite(LED_BUILTIN, LOW);
@@ -219,6 +218,12 @@ void loop()
     automata.sendLive(doc);
     delay(50);
     start = millis();
+  }
+  if (percent <= 30)
+  {
+    led.setPixelColor(0, 180, 0, 0);
+    led.show();
+    /* code */
   }
 
   led.setPixelColor(0, 0, 0, 0);
