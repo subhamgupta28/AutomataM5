@@ -3,6 +3,7 @@
 #include "ArduinoJson.h"
 #include <Adafruit_INA219.h>
 #include <Adafruit_NeoPixel.h>
+#include <Adafruit_AHTX0.h>
 #include <WiFiUdp.h>
 #define I2C_SDA_PIN 7
 #define I2C_SCL_PIN 9
@@ -14,7 +15,7 @@ int PORT = 443;
 // int PORT = 8010;
 
 Automata automata("Battery 270WH","SENSOR|BATTERY", HOST, PORT, "0.tcp.in.ngrok.io", 16035);
-
+Adafruit_AHTX0 aht;
 Preferences preferences;
 // Automata automata("Battery 178WH", HOST, PORT, "0.tcp.in.ngrok.io", 13928);
 JsonDocument doc;
@@ -106,8 +107,13 @@ void setup()
     Serial.println("Failed to find INA219_B chip");
   }
   preferences.begin("dummy", false);
-
+  if (aht.begin())
+  {
+    Serial.println("Found AHT20");
+  }
   automata.begin();
+    automata.useHTTPS();
+  automata.useWSS();
   getData();
 
   // automata.addAttribute("C1", "V1", "V", "DATA|AUX");
@@ -128,11 +134,15 @@ void setup()
   automata.addAttribute("reset", "Reset", "", "ACTION|MENU|BTN");
   automata.addAttribute("dischargingTime", "Runtime", "Hr", "DATA|MAIN");
   automata.addAttribute("status", "Status", "", "DATA|MAIN");
+    automata.addAttribute("temp", "Temp", "C", "DATA|MAIN");
+  automata.addAttribute("humid", "Humidity", "%", "DATA|MAIN");
   // automata.addAttribute("onOff", "OnOff", "", "ACTION|SWITCH");
 
   automata.registerDevice();
   automata.onActionReceived(action);
   automata.delayedUpdate(sendData);
+
+  automata.useWSS();
 
   // brightness = preferences.getInt("bright", 2);
   // presets = preferences.getInt("presets", 1);
@@ -195,7 +205,10 @@ void loop()
 {
 
   readPow();
-
+  sensors_event_t humidity, temp;
+  aht.getEvent(&humidity, &temp);
+  doc["temp"] = String(temp.temperature, 2);
+  doc["humid"] = String(humidity.relative_humidity, 2);
   doc["C1_CURR"] = String(c1_curr, 2);
   doc["C1_POWER"] = String(c1_pow, 2);
   // doc["shuntVoltage"] = String(shuntvoltage, 3);
